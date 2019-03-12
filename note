@@ -1,0 +1,4 @@
+gcc test.c -o test -Wall
+
+gcc test.c -g
+gdb test.exe
