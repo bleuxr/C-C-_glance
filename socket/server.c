@@ -1,100 +1,44 @@
-#define MINGW32
+#include<stdio.h>
+#include<stdlib.h>
+#include<errno.h>
+#include<string.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
  
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#define PORT 1500//端口号 
+#define BACKLOG 5/*最大监听数*/ 
  
-#ifdef MINGW32
-#include <winsock2.h>
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#endif
+int main(){
+	int sockfd,new_fd;/*socket句柄和建立连接后的句柄*/
+	struct sockaddr_in my_addr;/*本方地址信息结构体，下面有具体的属性赋值*/
+	struct sockaddr_in their_addr;/*对方地址信息*/
+	int sin_size;
  
-#define LISTENQ 10
- 
-int main(int argc,char *argv[])
-{
-  int serverfd,connectfd;
-  struct sockaddr_in serveraddr;
-  char buff[1024];
-  time_t tlick;
-  int iRet;
- 
-  #ifdef MINGW32
-  //Winsows下启用socket
-  WSADATA wsadata;
-  if(WSAStartup(MAKEWORD(1,1),&wsadata)==SOCKET_ERROR)
-  {
-    printf("WSAStartup() fail\n");
-    exit(0);
-  }
-  #endif
- 
-  //新建socket
-  printf("socket()\n");
-  serverfd=socket(AF_INET,SOCK_STREAM,0);
-  if(serverfd==-1)
-  {
-    printf("socket() fail\n");
-    exit(0);
-  }
- 
-  //清零
-  memset(&serveraddr,0,sizeof(serveraddr));
- 
-  //设置协议
-  serveraddr.sin_family=AF_INET;
-  //设置IP
-  serveraddr.sin_addr.s_addr=htonl(INADDR_ANY);
-  //设置Port
-  serveraddr.sin_port=htons(1024);
- 
-  //绑定端口，监听1024端口的任何请求
-  printf("bind()\n");
-  iRet=bind(serverfd,(struct sockaddr*)&serveraddr,sizeof(serveraddr));
-  if(iRet==-1)
-  {
-    printf("bind() fail\n");
-    exit(0);
-  }
- 
-  //监听端口，最大并发数10
-  printf("listen()\n");
-  iRet=listen(serverfd,LISTENQ);
-  if(iRet==-1)
-  {
-    printf("listen() fail\n");
-    exit(0);
-  }
- 
-  //接受请求，发送主机时间
-  for(;;)
-  {
-    printf("Waiting for connection...\n");
-    //接受请求
-    connectfd=accept(serverfd,(struct sockaddr*)NULL,NULL);
-    //获取时间 
-    tlick=time(NULL);
-    //格式化时间 
-    snprintf(buff,sizeof(buff),"From mys:\n%s",ctime(&tlick));
-    //写入时间
-    //关闭请求
-    #ifdef MINGW32
-    send(connectfd,buff,strlen(buff),0);
-    closesocket(connectfd);
-    #else
-    write(connectfd,buff,strlen(buff));
-    close(connectfd);
-    #endif
-  }
- 
-  #ifdef MINGW32
-  //Winsows下关闭socket
-  closesocket(serverfd);
-  WSACleanup();
-  #endif
- 
-  //退出
-  exit(0);
+	sockfd=socket(AF_INET,SOCK_STREAM,0);//建立socket 
+	if(sockfd==-1){
+		printf("socket failed:%d",errno);
+		return -1;
+	}
+	my_addr.sin_family=AF_INET;/*该属性表示接收本机或其他机器传输*/
+	my_addr.sin_port=htons(PORT);/*端口号*/
+	my_addr.sin_addr.s_addr=htonl(INADDR_ANY);/*IP，括号内容表示本机IP*/
+	bzero(&(my_addr.sin_zero),8);/*将其他属性置0*/
+	if(bind(sockfd,(struct sockaddr*)&my_addr,sizeof(struct sockaddr))<0){//绑定地址结构体和socket
+		printf("bind error");
+		return -1;
+	}
+    	listen(sockfd,BACKLOG);//开启监听 ，第二个参数是最大监听数 
+    	while(1){
+    		sin_size=sizeof(struct sockaddr_in);
+    		new_fd=accept(sockfd,(struct sockaddr*)&their_addr,(socklen_t*)&sin_size);//在这里阻塞直到接收到消息，参数分别是socket句柄，接收到的地址信息以及大小 
+    		if(new_fd==-1){
+    			printf("receive failed");
+		} else{
+			printf("receive success");
+			send(new_fd,"Hello World!",12,0);//发送内容，参数分别是连接句柄，内容，大小，其他信息（设为0即可） 
+		}
+	}
+	return 0;
 }
