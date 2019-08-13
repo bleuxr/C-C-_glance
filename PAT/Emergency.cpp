@@ -1,5 +1,4 @@
 #include<cstdio>
-#include<cstring>
 #include<algorithm>
 using namespace std;
 const int MAXV=501;
@@ -56,4 +55,5 @@ int main(){
     }
     dijkstra(c1);
     printf("%d %d",num[c2],w[c2]);
+    return 0;
 }
